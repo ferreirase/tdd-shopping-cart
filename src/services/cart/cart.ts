@@ -20,12 +20,14 @@ export type DiscountCondition = {
 export type Item = {
   product: Product;
   quantity: number;
-  condition?: DiscountCondition;
+  condition?: DiscountCondition | Array<DiscountCondition>;
 };
 
 export function CalculatePercentageDiscount(
   amount: DineroType,
-  item: Item,
+  item: Omit<Item, 'condition'> & {
+    condition?: DiscountCondition;
+  },
 ): DineroType {
   if (
     item.condition?.percentage &&
@@ -40,7 +42,9 @@ export function CalculatePercentageDiscount(
 
 export function CalculateQuantityDiscount(
   amount: DineroType,
-  item: Item,
+  item: Omit<Item, 'condition'> & {
+    condition?: DiscountCondition;
+  },
 ): DineroType {
   const isEven = item.quantity % 2 === 0;
 
@@ -53,6 +57,37 @@ export function CalculateQuantityDiscount(
   }
 
   return Money({ amount: 0 });
+}
+
+export function CalculateHigherDiscount(
+  amount: DineroType,
+  item: Omit<Item, 'condition'> & {
+    condition?: Array<DiscountCondition>;
+  },
+): DineroType {
+  const { condition } = item;
+
+  const [discount] = (condition ?? [])
+    .map((cond: DiscountCondition) => {
+      if (cond?.quantity) {
+        return CalculateQuantityDiscount(amount, {
+          ...item,
+          condition: cond,
+        }).getAmount();
+      }
+
+      if (cond?.percentage && cond?.minimum) {
+        return CalculatePercentageDiscount(amount, {
+          ...item,
+          condition: cond,
+        }).getAmount();
+      }
+
+      return Money({ amount: 0 });
+    })
+    .sort((a, b) => Number(b) - Number(a));
+
+  return Money({ amount: discount as number });
 }
 
 export class Cart {
@@ -81,9 +116,29 @@ export class Cart {
           amount: item.quantity * item.product.price,
         });
 
-        const discount: DineroType = item.condition?.percentage
-          ? CalculatePercentageDiscount(amount, item)
-          : CalculateQuantityDiscount(amount, item);
+        const discount: DineroType =
+          item.condition instanceof Array
+            ? CalculateHigherDiscount(
+                amount,
+                item as Omit<Item, 'condition'> & {
+                  condition?: Array<DiscountCondition>;
+                },
+              )
+            : item.condition && item.condition?.percentage
+            ? CalculatePercentageDiscount(
+                amount,
+                item as Omit<Item, 'condition'> & {
+                  condition?: DiscountCondition;
+                },
+              )
+            : item.quantity
+            ? CalculateQuantityDiscount(
+                amount,
+                item as Omit<Item, 'condition'> & {
+                  condition?: DiscountCondition;
+                },
+              )
+            : Money({ amount: 0 });
 
         return acc.add(amount).subtract(discount);
       }, Money({ amount: 0 }))

@@ -213,5 +213,26 @@ describe('Cart', () => {
           item.product.price * item.quantity * 0.4,
       );
     });
+
+    it('should apply the higher discount when 2 or more discount conditions is given', () => {
+      const firstCondition: DiscountCondition = {
+        quantity: 2,
+      };
+
+      const secondCondition: DiscountCondition = {
+        percentage: 20,
+        minimum: 2,
+      };
+
+      const item: Item = {
+        product,
+        condition: [firstCondition, secondCondition],
+        quantity: 3,
+      };
+
+      cart.addItem(item);
+
+      expect(cart.getTotal()).toBe(720);
+    });
   });
 });
