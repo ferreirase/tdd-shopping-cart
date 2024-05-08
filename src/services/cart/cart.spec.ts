@@ -234,5 +234,17 @@ describe('Cart', () => {
 
       expect(cart.getTotal()).toBe(720);
     });
+
+    it('should not apply discount when condition array is empty', () => {
+      const item: Item = {
+        product,
+        condition: [],
+        quantity: 3,
+      };
+
+      cart.addItem(item);
+
+      expect(cart.getTotal()).toBe(item.product.price * item.quantity);
+    });
   });
 });

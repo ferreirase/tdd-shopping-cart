@@ -62,28 +62,26 @@ export function CalculateQuantityDiscount(
 export function CalculateHigherDiscount(
   amount: DineroType,
   item: Omit<Item, 'condition'> & {
-    condition?: Array<DiscountCondition>;
+    condition: Array<DiscountCondition>;
   },
 ): DineroType {
   const { condition } = item;
 
-  const [discount] = (condition ?? [])
+  if (condition?.length === 0) {
+    return Money({ amount: 0 });
+  }
+
+  const [discount] = condition
     .map((cond: DiscountCondition) => {
-      if (cond?.quantity) {
-        return CalculateQuantityDiscount(amount, {
-          ...item,
-          condition: cond,
-        }).getAmount();
-      }
-
-      if (cond?.percentage && cond?.minimum) {
-        return CalculatePercentageDiscount(amount, {
-          ...item,
-          condition: cond,
-        }).getAmount();
-      }
-
-      return Money({ amount: 0 });
+      return cond?.quantity
+        ? CalculateQuantityDiscount(amount, {
+            ...item,
+            condition: cond,
+          }).getAmount()
+        : CalculatePercentageDiscount(amount, {
+            ...item,
+            condition: cond,
+          }).getAmount();
     })
     .sort((a, b) => Number(b) - Number(a));
 
@@ -121,7 +119,7 @@ export class Cart {
             ? CalculateHigherDiscount(
                 amount,
                 item as Omit<Item, 'condition'> & {
-                  condition?: Array<DiscountCondition>;
+                  condition: Array<DiscountCondition>;
                 },
               )
             : item.condition && item.condition?.percentage
@@ -131,7 +129,7 @@ export class Cart {
                   condition?: DiscountCondition;
                 },
               )
-            : item.quantity
+            : item.condition && item.condition?.quantity
             ? CalculateQuantityDiscount(
                 amount,
                 item as Omit<Item, 'condition'> & {
