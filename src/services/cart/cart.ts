@@ -1,5 +1,11 @@
 import Dinero, { Dinero as DineroType } from 'dinero.js';
 import { remove } from 'lodash';
+import {
+  CalculateHigherDiscount,
+  CalculatePercentageDiscount,
+  CalculateQuantityDiscount,
+  DiscountCondition,
+} from './discounts';
 
 const Money = Dinero;
 
@@ -11,82 +17,11 @@ export type Product = {
   price: number;
 };
 
-export type DiscountCondition = {
-  percentage?: number;
-  minimum?: number;
-  quantity?: number;
-};
-
 export type Item = {
   product: Product;
   quantity: number;
   condition?: DiscountCondition | Array<DiscountCondition>;
 };
-
-export function CalculatePercentageDiscount(
-  amount: DineroType,
-  item: Omit<Item, 'condition'> & {
-    condition?: DiscountCondition;
-  },
-): DineroType {
-  if (
-    item.condition?.percentage &&
-    item.condition?.minimum &&
-    item.quantity > item.condition?.minimum
-  ) {
-    return amount.percentage(item.condition.percentage);
-  }
-
-  return Money({ amount: 0 });
-}
-
-export function CalculateQuantityDiscount(
-  amount: DineroType,
-  item: Omit<Item, 'condition'> & {
-    condition?: DiscountCondition;
-  },
-): DineroType {
-  const isEven = item.quantity % 2 === 0;
-
-  if (
-    item.condition &&
-    item.condition.quantity &&
-    item.quantity > item.condition.quantity
-  ) {
-    return amount.percentage(isEven ? 50 : 40);
-  }
-
-  return Money({ amount: 0 });
-}
-
-export function CalculateHigherDiscount(
-  amount: DineroType,
-  item: Omit<Item, 'condition'> & {
-    condition: Array<DiscountCondition>;
-  },
-): DineroType {
-  const { condition } = item;
-
-  if (condition?.length === 0) {
-    return Money({ amount: 0 });
-  }
-
-  const [discount] = condition
-    .map((cond: DiscountCondition) => {
-      return cond?.quantity
-        ? CalculateQuantityDiscount(amount, {
-            ...item,
-            condition: cond,
-          }).getAmount()
-        : CalculatePercentageDiscount(amount, {
-            ...item,
-            condition: cond,
-          }).getAmount();
-    })
-    .sort((a, b) => Number(b) - Number(a));
-
-  return Money({ amount: discount as number });
-}
 
 export class Cart {
   private items: Array<Item> = [];

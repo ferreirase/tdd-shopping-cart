@@ -1,4 +1,5 @@
-import { Cart, DiscountCondition, Item, Product } from './cart';
+import { Cart, Item, Product } from './cart';
+import { DiscountCondition } from './discounts';
 
 describe('Cart', () => {
   let cart: Cart;
